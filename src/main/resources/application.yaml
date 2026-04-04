@@ -1,0 +1,24 @@
+spring:
+  ai:
+    dashscope:
+      api-key: sk-b917f97befbb4ed894b822f29d81220f
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/pdftool?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 1234
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+
+mybatis-plus:
+  configuration:
+    #开启驼峰命名
+    map-underscore-to-camel-case: true
+
+# Knife4j配置
+knife4j:
+  enable: true  # 开启增强配置

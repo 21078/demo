@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(mvn spring-boot:run)",
+      "Bash(mvn clean:*)",
+      "Bash(pkill -f maven)",
+      "Bash(curl -s \"http://localhost:8080/ai/generate?message=讲个笑话\")",
+      "Bash(curl -s -w \"\\\\nHTTP Status: %{http_code}\\\\n\" \"http://localhost:8080/ai/generate?message=hello\")"
+    ]
+  }
+}
