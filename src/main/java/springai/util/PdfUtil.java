@@ -18,12 +18,12 @@ import java.util.List;
 public class PdfUtil {
 
     /**
-     * 方法1：按页读取PDF文件并转为字符串列表
+     * 读取PDF文件并提取文本内容
      * @param pdfFile PDF文件
-     * @return 按页分割的字符串列表，图片会被跳过
+     * @return 按页分割的文本内容列表
      */
-    public static ArrayList<String> readPdfByPage(File pdfFile) {
-        ArrayList<String> pageTexts = new ArrayList<>();
+    public static List<String> extractTextFromPdf(File pdfFile) {
+        List<String> pageTexts = new ArrayList<>();
         PDDocument document = null;
 
         try {

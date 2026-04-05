@@ -131,7 +131,7 @@ public class ChatController {
             Files.copy(pdfFile.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
 
             // 3. 提取PDF文本内容
-            ArrayList<String> pageTexts = PdfUtil.readPdfByPage(tempFile.toFile());
+            List<String> pageTexts = PdfUtil.extractTextFromPdf(tempFile.toFile());
 
             // 4. 合并所有页面文本
             StringBuilder allText = new StringBuilder();
@@ -143,10 +143,10 @@ public class ChatController {
             String summary = generateSummary(allText.toString(), "请总结以下内容");
 
             // 6. 生成PlantUML
-            String plantUmlCode = UmlUtil.umlwithimage(chatClient, summary);
+            String plantUmlCode = UmlUtil.convertTextToPlantUml(chatClient, summary);
 
             // 7. 创建新的PDF，包含PlantUML图片
-            byte[] plantUmlImage = UmlUtil.generatePlantUmlImage(plantUmlCode);
+            byte[] plantUmlImage = UmlUtil.convertPlantUmlToImage(plantUmlCode);
 
             // 8. 生成包含图片的新PDF
             List<byte[]> images = new ArrayList<>();

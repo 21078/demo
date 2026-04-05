@@ -32,22 +32,22 @@ public class UmlUtil {
                 "@enduml";
 
     /**
-     * 构造plantuml流图
+     * 将文本内容转换为PlantUML代码
      * @param chatClient ChatClient实例
      * @param text 输入文本
      * @return PlantUML代码
      */
-    public static String umlwithimage(ChatClient chatClient, String text) {
+    public static String convertTextToPlantUml(ChatClient chatClient, String text) {
         return chatClient.prompt("请根据以下内容生成plantuml代码，只返回代码不要其他说明，注意文字使用中文行楷,参考模板："+plantUmlUrl)
                 .user(text).call().content();
     }
 
     /**
-     * 生成PlantUML图片
+     * 将PlantUML代码转换为图片字节数组
      * @param plantUmlCode PlantUML代码
      * @return 图片字节数组
      */
-    public static byte[] generatePlantUmlImage(String plantUmlCode) {
+    public static byte[] convertPlantUmlToImage(String plantUmlCode) {
         try {
             // 清理PlantUML代码，移除可能的markdown标记
             String cleanCode = plantUmlCode.replaceAll("```plantuml", "")
