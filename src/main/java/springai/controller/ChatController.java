@@ -6,31 +6,45 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.ai.chat.prompt.Prompt;
+// import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import springai.entity.Session;
 import springai.service.SessionService;
+import springai.util.PdfUtil;
+import springai.util.UmlUtil;
 
 @Tag(name = "聊天API")
-@RestController( value = "/ai")
+@RestController
+@RequestMapping("/ai")
 public class ChatController {
     @Resource
     private SessionService sessionService;
     @Resource
     private ChatClient chatClient;
 
-    @Resource 
-    private StringRedisTemplate stringRedisTemplate;
+    // @Resource 
+    // private StringRedisTemplate stringRedisTemplate;
 
 
 
@@ -93,14 +107,87 @@ public class ChatController {
     }
 
     /**
-     * 功能测试响应
+     * PDF智能处理 - 提取文本、AI总结、生成PlantUML并创建新PDF
+     * @param pdfFile 上传的PDF文件
+     * @return 处理结果信息
      */
-    @Operation(description = "功能测试响应")
-    @GetMapping("/test")
-    public String test() {
+    @Operation(description = "PDF智能处理")
+    @PostMapping("/pdf")
+    public Map<String, Object> processPdf(@RequestPart("file") MultipartFile pdfFile) {
+        Map<String, Object> result = new HashMap<>();
 
-        stringRedisTemplate.opsForValue().set("test", "test");
-        
-        return "success";
+        try {
+            // 1. 验证文件
+            if (pdfFile == null || pdfFile.isEmpty()) {
+                throw new IllegalArgumentException("请上传PDF文件");
+            }
+
+            if (!pdfFile.getOriginalFilename().toLowerCase().endsWith(".pdf")) {
+                throw new IllegalArgumentException("请上传PDF格式的文件");
+            }
+
+            // 2. 创建临时文件
+            Path tempFile = Files.createTempFile("upload-", ".pdf");
+            Files.copy(pdfFile.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
+
+            // 3. 提取PDF文本内容
+            ArrayList<String> pageTexts = PdfUtil.readPdfByPage(tempFile.toFile());
+
+            // 4. 合并所有页面文本
+            StringBuilder allText = new StringBuilder();
+            for (int i = 0; i < pageTexts.size(); i++) {
+                allText.append("第").append(i + 1).append("页内容：").append(pageTexts.get(i)).append("\n\n");
+            }
+
+            // 5. 使用AI总结文本
+            String summary = generateSummary(allText.toString(), "请总结以下内容");
+
+            // 6. 生成PlantUML
+            String plantUmlCode = UmlUtil.umlwithimage(chatClient, summary);
+
+            // 7. 创建新的PDF，包含PlantUML图片
+            byte[] plantUmlImage = UmlUtil.generatePlantUmlImage(plantUmlCode);
+
+            // 8. 生成包含图片的新PDF
+            List<byte[]> images = new ArrayList<>();
+            if (plantUmlImage != null) {
+                images.add(plantUmlImage);
+            }
+
+            byte[] newPdfBytes = PdfUtil.createPdfFromImagesToBytes(images);
+
+            // 9. 清理临时文件
+            Files.deleteIfExists(tempFile);
+
+            // 10. 返回结果
+            result.put("success", true);
+            result.put("pageCount", pageTexts.size());
+            result.put("summary", summary);
+            result.put("plantUmlCode", plantUmlCode);
+
+            // 将PDF字节数组转换为Base64编码的字符串
+            if (newPdfBytes != null && newPdfBytes.length > 0) {
+                String base64Pdf = java.util.Base64.getEncoder().encodeToString(newPdfBytes);
+                result.put("processedPdf", base64Pdf);
+            } else {
+                result.put("processedPdf", null);
+            }
+
+            result.put("message", "PDF处理完成");
+
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+
+        return result;
     }
+
+
+    //文字总结(可携带上文)：
+    private String generateSummary(String text,String message) {
+        Prompt prompt = new Prompt("前文："+message+"，请帮我总结");
+        return chatClient.prompt(prompt).user(text).call().content();
+    }
+
 }

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring AI 智能助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #45a049, #3d8b40);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .result-content {
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .download-link {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .download-link:hover {
+            background: #0056b3;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .pdf-result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+
+        .pdf-info {
+            margin-bottom: 15px;
+        }
+
+        .pdf-info p {
+            margin: 5px 0;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+
+            .section {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Spring AI 智能助手</h1>
+            <p>PDF智能处理 | 文本对话 | 流程图生成</p>
+        </div>
+
+        <div class="content">
+            <!-- 普通对话接口 -->
+            <div class="section">
+                <h2>💬 普通对话</h2>
+                <div class="form-group">
+                    <label for="message">输入您的问题：</label>
+                    <input type="text" id="message" placeholder="请输入您的问题..." value="Tell me a joke">
+                </div>
+                <button class="btn" onclick="sendMessage()">发送消息</button>
+                <div id="loading1" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在思考中...</p>
+                </div>
+                <div id="result1" class="result"></div>
+            </div>
+
+            <!-- 流式对话接口 -->
+            <div class="section">
+                <h2>🌊 流式对话</h2>
+                <div class="form-group">
+                    <label for="streamMessage">输入您的问题：</label>
+                    <input type="text" id="streamMessage" placeholder="请输入您的问题..." value="Tell me a joke">
+                </div>
+                <div class="form-group">
+                    <label for="sessionId">会话ID：</label>
+                    <input type="text" id="sessionId" value="0">
+                </div>
+                <button class="btn" onclick="sendStreamMessage()">发送流式消息</button>
+                <div id="loading2" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在生成回复...</p>
+                </div>
+                <div id="result2" class="result"></div>
+            </div>
+
+            <!-- PDF处理接口 -->
+            <div class="section">
+                <h2>📄 PDF智能处理</h2>
+                <div class="form-group">
+                    <label for="pdfFile">选择PDF文件：</label>
+                    <input type="file" id="pdfFile" accept=".pdf">
+                </div>
+                <button class="btn" onclick="processPdf()">处理PDF</button>
+                <div id="loading3" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在处理PDF，请稍候...</p>
+                </div>
+                <div id="result3" class="result"></div>
+                <div id="pdfResult" class="pdf-result" style="display: none;">
+                    <div class="pdf-info">
+                        <h3>📊 处理结果</h3>
+                        <p><strong>页面数量：</strong><span id="pageCount"></span></p>
+                        <p><strong>AI总结：</strong></p>
+                        <div id="summary" class="result-content"></div>
+                        <p><strong>PlantUML代码：</strong></p>
+                        <div id="plantUmlCode" class="result-content"></div>
+                    </div>
+                    <a id="downloadLink" class="download-link" download="processed-diagram.pdf">
+                        📥 下载处理后的PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 普通对话
+        async function sendMessage() {
+            const message = document.getElementById('message').value;
+            const resultDiv = document.getElementById('result1');
+            const loadingDiv = document.getElementById('loading1');
+
+            if (!message.trim()) {
+                alert('请输入消息内容');
+                return;
+            }
+
+            resultDiv.style.display = 'none';
+            loadingDiv.style.display = 'block';
+
+            try {
+                const response = await fetch('/ai/call?message=' + encodeURIComponent(message), {
+                    method: 'GET'
+                });
+
+                const data = await response.text();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `<strong>AI回复：</strong><div class="result-content">${data}</div>`;
+                resultDiv.style.display = 'block';
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>错误：</strong><div class="result-content">${error.message}</div>`;
+                resultDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // 流式对话
+        async function sendStreamMessage() {
+            const message = document.getElementById('streamMessage').value;
+            const sessionId = document.getElementById('sessionId').value;
+            const resultDiv = document.getElementById('result2');
+            const loadingDiv = document.getElementById('loading2');
+
+            if (!message.trim()) {
+                alert('请输入消息内容');
+                return;
+            }
+
+            resultDiv.style.display = 'none';
+            loadingDiv.style.display = 'block';
+
+            try {
+                const response = await fetch(`/ai/stream?message=${encodeURIComponent(message)}&sessionId=${sessionId}`, {
+                    method: 'GET'
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let content = '';
+
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `<strong>AI回复：</strong><div class="result-content" id="streamContent"></div>`;
+                resultDiv.style.display = 'block';
+
+                const streamContent = document.getElementById('streamContent');
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    content += chunk;
+                    streamContent.textContent = content;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>错误：</strong><div class="result-content">${error.message}</div>`;
+                resultDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // PDF处理
+        async function processPdf() {
+            const fileInput = document.getElementById('pdfFile');
+            const resultDiv = document.getElementById('result3');
+            const loadingDiv = document.getElementById('loading3');
+            const pdfResultDiv = document.getElementById('pdfResult');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('请选择PDF文件');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                alert('请选择PDF格式的文件');
+                return;
+            }
+
+            resultDiv.style.display = 'none';
+            pdfResultDiv.style.display = 'none';
+            loadingDiv.style.display = 'block';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/ai/pdf', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `<strong>处理成功！</strong>`;
+                    resultDiv.style.display = 'block';
+
+                    // 显示详细信息
+                    document.getElementById('pageCount').textContent = data.pageCount;
+                    document.getElementById('summary').textContent = data.summary || '无总结内容';
+                    document.getElementById('plantUmlCode').textContent = data.plantUmlCode || '无PlantUML代码';
+
+                    // 设置下载链接
+                    if (data.processedPdf) {
+                        const downloadLink = document.getElementById('downloadLink');
+                        // 将Base64字符串转换为Blob
+                        const binaryString = atob(data.processedPdf);
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        const blob = new Blob([bytes], { type: 'application/pdf' });
+                        const url = URL.createObjectURL(blob);
+                        downloadLink.href = url;
+
+                        // 清理旧的URL对象
+                        downloadLink.onclick = function() {
+                            setTimeout(() => {
+                                URL.revokeObjectURL(url);
+                            }, 100);
+                        };
+                    }
+
+                    pdfResultDiv.style.display = 'block';
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<strong>处理失败：</strong><div class="result-content">${data.error || '未知错误'}</div>`;
+                    resultDiv.style.display = 'block';
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>错误：</strong><div class="result-content">${error.message}</div>`;
+                resultDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // 按Enter键发送消息
+        document.getElementById('message').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        document.getElementById('streamMessage').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendStreamMessage();
+            }
+        });
+    </script>
+</body>
+</html>

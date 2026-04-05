@@ -6,7 +6,13 @@
       "Bash(mvn clean:*)",
       "Bash(pkill -f maven)",
       "Bash(curl -s \"http://localhost:8080/ai/generate?message=讲个笑话\")",
-      "Bash(curl -s -w \"\\\\nHTTP Status: %{http_code}\\\\n\" \"http://localhost:8080/ai/generate?message=hello\")"
+      "Bash(curl -s -w \"\\\\nHTTP Status: %{http_code}\\\\n\" \"http://localhost:8080/ai/generate?message=hello\")",
+      "WebFetch(domain:pdfbox.apache.org)",
+      "Bash(mvn compile:*)",
+      "Bash(mvn dependency:tree)",
+      "Bash(mvn dependency:build-classpath -Dmdep.outputFile=classpath.txt)",
+      "Bash(java -cp \"D:\\\\vs.code\\\\java_works\\\\springai\\\\demo\\\\classpath.txt\" org.apache.pdfbox.pdmodel.PDDocument)",
+      "Bash(mvn test-compile:*)"
     ]
   }
 }
