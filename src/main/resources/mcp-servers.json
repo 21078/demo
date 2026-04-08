@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "pdfbox-server": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "./pdfbox-mcp-1.0-SNAPSHOT.jar"
+      ]
+    }
+  }
+}

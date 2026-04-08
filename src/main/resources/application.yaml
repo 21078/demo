@@ -1,11 +1,21 @@
 server:
   port: 8080
+
 spring:
   # ai配置
   ai:
     dashscope:
       api-key: sk-b917f97befbb4ed894b822f29d81220f
-  #数据库及其连接池
+    mcp:
+      client:
+        enabled: true
+        name: pdftool
+        version: 1.0.0
+        stdio:
+          # 关键：使用外部 JSON 文件配置
+          servers-configuration: classpath:mcp-servers.json
+  
+  # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/pdftool?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
@@ -17,8 +27,9 @@ spring:
       min-idle: 5
       max-active: 20
       max-wait: 60000
-  #Redis配置
-  data:  
+  
+  # Redis配置
+  data:
     redis:
       host: 127.0.0.1
       port: 6379
@@ -29,12 +40,11 @@ spring:
           min-idle: 1
           time-between-eviction-runs: 10s
 
-# MyBatis-Plus配置（没有映射mapper）
+# MyBatis-Plus配置
 mybatis-plus:
   configuration:
-    #开启驼峰命名
     map-underscore-to-camel-case: true
 
 # Knife4j配置
 knife4j:
-  enable: true  # 开启增强配置
+  enable: true
