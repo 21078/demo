@@ -6,14 +6,20 @@ spring:
   ai:
     dashscope:
       api-key: sk-b917f97befbb4ed894b822f29d81220f
-    mcp:
-      client:
-        enabled: true
-        name: pdftool
-        version: 1.0.0
-        stdio:
-          # 关键：使用外部 JSON 文件配置
-          servers-configuration: classpath:mcp-servers.json
+    # mcp:
+    #   client:
+    #     enabled: true
+    #     name: pdftool
+    #     version: 1.0.0
+
+
+        # sse:这个也难搞
+        #   connections:
+        #     server1:
+        #       url:http://localhost:8081 #mcp服务 
+        # stdio:不知道为什么不行
+        #   # 关键：使用外部 JSON 文件配置
+        #   servers-configuration: classpath:mcp-servers.json
   
   # 数据库配置
   datasource:
