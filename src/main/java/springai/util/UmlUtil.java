@@ -10,24 +10,10 @@ import java.io.ByteArrayOutputStream;
  */
 public class UmlUtil {
 
-    private final static String plantUmlUrl = "@startuml\r\n" + //
-            "actor 用户\r\n" + //
-            "participant \"前端页面\" as Web\r\n" + //
-            "participant \"后端服务\" as API\r\n" + //
-            "database 数据库\r\n" + //
-            "\r\n" + //
-            "用户 -> Web : 点击登录按钮\r\n" + //
-            "activate Web\r\n" + //
-            "Web -> API : POST /api/login\r\n" + //
-            "activate API\r\n" + //
-            "API -> 数据库 : 查询用户信息\r\n" + //
-            "activate 数据库\r\n" + //
-            "数据库 --> API : 返回用户信息\r\n" + //
-            "deactivate 数据库\r\n" + //
-            "API --> Web : 返回 token\r\n" + //
-            "deactivate API\r\n" + //
-            "Web --> 用户 : 跳转首页\r\n" + //
-            "deactivate Web\r\n" + //
+    private final static String plantUmlUrl = "@startuml\r\n" +
+            "actor 用户\r\n" +
+            "participant 系统\r\n" +
+            "用户 -> 系统 : 请求\r\n" +
             "@enduml";
 
     /**
@@ -39,7 +25,11 @@ public class UmlUtil {
      */
     public static String convertTextToPlantUml(ChatClient chatClient, String text) {
         return chatClient
-                .prompt("请根据以下内容生成plantuml代码，总体应该不超过200个字符，否则后续生成的图片太大了只返回代码不要其他说明，注意文字使用中文行楷,参考模板：" + plantUmlUrl)
+                .prompt("请根据以下内容生成plantuml时序图代码，要求：\n" +
+                        "1. 只返回代码不要其他说明\n" +
+                        "2. 使用简洁的中文描述\n" +
+                        "3. 总体不超过300个字符\n" +
+                        "4. 参考简单模板：" + plantUmlUrl)
                 .user(text).call().content();
     }
 
@@ -56,7 +46,7 @@ public class UmlUtil {
                     .replaceAll("```", "")
                     .trim();
 
-            System.out.println("清理后的PlantUML代码：" + cleanCode);
+            // System.out.println("清理后的PlantUML代码：" + cleanCode);
 
             // 使用PlantUML生成图片
             SourceStringReader reader = new SourceStringReader(cleanCode);
