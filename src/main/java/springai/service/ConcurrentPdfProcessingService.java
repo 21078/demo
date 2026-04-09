@@ -1,6 +1,10 @@
 package springai.service;
 
 import jakarta.annotation.Resource;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
@@ -75,7 +79,7 @@ public class ConcurrentPdfProcessingService {
                                 .map(CompletableFuture::join)
                                 .toList();
 
-                        return generateFinalResult(results, sessionId);
+                        return generateResult(results, sessionId);
                     });
 
         } catch (Exception e) {
@@ -121,6 +125,12 @@ public class ConcurrentPdfProcessingService {
             // 保存当前组总结到LocalCache
             LocalCache.put(sessionId + "Const.CONTEXT_PRE" + groupIndex, groupSummary);
 
+            // 标记当前组完成 - 释放当前组的CountDownLatch（下一个组只需要前文总结）
+            CountDownLatch currentLatch = (CountDownLatch) LocalCache.get(sessionId + "Const.COUNTDOWN_PRE" + groupIndex);
+            if (currentLatch != null) {
+                currentLatch.countDown(); // 释放锁，让下一个组可以继续
+            }
+
             // 生成PlantUML代码
             String plantUmlCode = UmlUtil.convertTextToPlantUml(chatClient, groupSummary);
 
@@ -132,12 +142,6 @@ public class ConcurrentPdfProcessingService {
 
             // 保存图片到LocalCache
             LocalCache.put(sessionId + "Const.IMAGE_PRE" + groupIndex, imageData);
-
-            // 标记当前组完成 - 释放当前组的CountDownLatch
-            CountDownLatch currentLatch = (CountDownLatch) LocalCache.get(sessionId + "Const.COUNTDOWN_PRE" + groupIndex);
-            if (currentLatch != null) {
-                currentLatch.countDown(); // 释放锁，让下一个组可以继续
-            }
 
             return new GroupResult(groupIndex, groupSummary, plantUmlCode, imageData);
 
@@ -165,54 +169,35 @@ public class ConcurrentPdfProcessingService {
     }
 
     /**
-     * 生成最终结果
+     * 生成结果（不需要最终汇总，直接返回各组结果）
      */
-    private PdfProcessingResult generateFinalResult(List<GroupResult> groupResults, String sessionId) {
+    private PdfProcessingResult generateResult(List<GroupResult> groupResults, String sessionId) {
         try {
-            // 从LocalCache读取所有结果生成最终PDF
-            StringBuilder allSummaries = new StringBuilder();
+            // 收集所有图片
             List<byte[]> allImages = new ArrayList<>();
 
-            for (int i = 0; i < groupResults.size(); i++) {
-                GroupResult result = groupResults.get(i);
-                allSummaries.append("第").append(i + 1).append("组总结：")
-                           .append(result.summary).append("\n\n");
-
+            for (GroupResult result : groupResults) {
                 if (result.imageData != null && result.imageData.length > 0) {
                     allImages.add(result.imageData);
                 }
             }
 
-            // 生成最终总结
-            String finalSummary = generateFinalSummary(allSummaries.toString());
-
-            // 生成最终PlantUML
-            String finalPlantUml = UmlUtil.convertTextToPlantUml(chatClient, finalSummary);
-            byte[] finalImage = UmlUtil.convertPlantUmlToImage(finalPlantUml);
-
-            if (finalImage != null && finalImage.length > 0) {
-                allImages.add(finalImage);
-            }
-
             // 清理LocalCache中的会话数据
             clearSessionCache(sessionId);
 
-            return new PdfProcessingResult(finalSummary, finalPlantUml, allImages);
+            // 返回第一个组的结果作为代表（或者可以返回组合的PlantUML）
+            String representativeSummary = groupResults.isEmpty() ? "" : groupResults.get(0).summary;
+            String representativePlantUml = groupResults.isEmpty() ? "" : groupResults.get(0).plantUmlCode;
+
+            return new PdfProcessingResult(representativeSummary, representativePlantUml, allImages);
 
         } catch (Exception e) {
-            throw new RuntimeException("生成最终结果失败: " + e.getMessage(), e);
+            throw new RuntimeException("生成结果失败: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * 生成最终总结
-     */
-    private String generateFinalSummary(String allSummaries) {
-        String promptText = "以下是按页组分块总结的内容，请整合成一个完整的总结：\n\n" + allSummaries;
-        Prompt prompt = new Prompt(promptText);
-        return chatClient.prompt(prompt).call().content();
-    }
 
+    
     /**
      * 清理会话缓存
      */
@@ -225,33 +210,26 @@ public class ConcurrentPdfProcessingService {
     /**
      * 组处理结果
      */
+    @Data
+    @AllArgsConstructor
+    @Builder
     public static class GroupResult {
         public final int groupIndex;
         public final String summary;
         public final String plantUmlCode;
         public final byte[] imageData;
-
-        public GroupResult(int groupIndex, String summary, String plantUmlCode, byte[] imageData) {
-            this.groupIndex = groupIndex;
-            this.summary = summary;
-            this.plantUmlCode = plantUmlCode;
-            this.imageData = imageData;
-        }
     }
 
     /**
      * PDF处理最终结果
      */
+    @Data
+    @AllArgsConstructor
+    @Builder
     public static class PdfProcessingResult {
         public final String finalSummary;
         public final String finalPlantUmlCode;
         public final List<byte[]> allImages;
-
-        public PdfProcessingResult(String finalSummary, String finalPlantUmlCode, List<byte[]> allImages) {
-            this.finalSummary = finalSummary;
-            this.finalPlantUmlCode = finalPlantUmlCode;
-            this.allImages = allImages;
-        }
     }
 
     /**
