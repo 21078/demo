@@ -123,10 +123,10 @@ public class ConcurrentPdfProcessingService {
             String groupSummary = generateGroupSummary(groupContent, previousSummary, groupIndex);
 
             // 保存当前组总结到LocalCache
-            LocalCache.put(sessionId + "Const.CONTEXT_PRE" + groupIndex, groupSummary);
+            LocalCache.put(sessionId + Const.CONTEXT_PRE + groupIndex, groupSummary);
 
             // 标记当前组完成 - 释放当前组的CountDownLatch（下一个组只需要前文总结）
-            CountDownLatch currentLatch = (CountDownLatch) LocalCache.get(sessionId + "Const.COUNTDOWN_PRE" + groupIndex);
+            CountDownLatch currentLatch = (CountDownLatch) LocalCache.get(sessionId + Const.COUNTDOWN_PRE + groupIndex);
             if (currentLatch != null) {
                 currentLatch.countDown(); // 释放锁，让下一个组可以继续
             }
@@ -135,13 +135,13 @@ public class ConcurrentPdfProcessingService {
             String plantUmlCode = UmlUtil.convertTextToPlantUml(chatClient, groupSummary);
 
             // 保存PlantUML代码到LocalCache
-            LocalCache.put(sessionId + "Const.UMLCODE_PRE" + groupIndex, plantUmlCode);
+            LocalCache.put(sessionId + Const.UMLCODE_PRE + groupIndex, plantUmlCode);
 
             // 生成图片
             byte[] imageData = UmlUtil.convertPlantUmlToImage(plantUmlCode);
 
             // 保存图片到LocalCache
-            LocalCache.put(sessionId + "Const.IMAGE_PRE" + groupIndex, imageData);
+            LocalCache.put(sessionId + Const.IMAGE_PRE + groupIndex, imageData);
 
             return new GroupResult(groupIndex, groupSummary, plantUmlCode, imageData);
 
@@ -182,8 +182,8 @@ public class ConcurrentPdfProcessingService {
                 }
             }
 
-            // 清理LocalCache中的会话数据
-            clearSessionCache(sessionId);
+            // 注意：这里不清理缓存，由控制器在PDF生成完成后统一清理
+            // 这样可以确保在处理过程中缓存数据可用
 
             // 返回第一个组的结果作为代表（或者可以返回组合的PlantUML）
             String representativeSummary = groupResults.isEmpty() ? "" : groupResults.get(0).summary;
@@ -199,11 +199,13 @@ public class ConcurrentPdfProcessingService {
 
     
     /**
-     * 清理会话缓存
+     * 清理会话缓存（公共方法，供控制器调用）
+     * 在PDF转换完成后立即清理临时缓存，保留最终结果
      */
-    private void clearSessionCache(String sessionId) {
+    public void cleanupSessionCache(String sessionId) {
         // 清理所有以sessionId开头的缓存项
-        LocalCache.removeByPattern(sessionId + "*");
+        int clearedCount = LocalCache.removeByPattern(sessionId + "*");
+        System.out.println("已清理会话缓存: " + sessionId + ", 清理条目数: " + clearedCount);
     }
 
     

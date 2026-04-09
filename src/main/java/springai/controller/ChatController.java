@@ -157,7 +157,12 @@ public class ChatController {
                 // 6. 生成最终的PDF
                 byte[] newPdfBytes = PdfUtil.createPdfFromImagesToBytes(allImages);
 
-                // 7. 返回结果
+                // 7. PDF转换完成后立即清理缓存（关键优化点）
+                // 注意：这里清理的是处理过程中的临时缓存，不是最终的PlantUML代码
+                // finalPlantUmlCode已经保存在result中，可以被前端使用
+                concurrentPdfProcessingService.cleanupSessionCache(sessionId);
+
+                // 8. 返回结果
                 result.put("success", true);
                 result.put("pageCount", pageGroups.size() * 2); // 估算总页数
                 result.put("groupCount", pageGroups.size());
@@ -172,7 +177,7 @@ public class ChatController {
                     result.put("processedPdf", null);
                 }
 
-                result.put("message", "PDF处理完成，使用多线程并发处理，2页一组");
+                result.put("message", "PDF处理完成，使用多线程并发处理，2页一组，缓存已清理");
 
             } finally {
                 // 清理临时文件
