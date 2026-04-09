@@ -46,7 +46,9 @@ public class ChatController {
     // @Resource 
     // private StringRedisTemplate stringRedisTemplate;
 
-
+    //用于拼接key的字符串：
+    public static final String CONTEXT_PRE = "context:";
+    public static final String UMLCODE_PRE = "umlcode:";
 
 
 

@@ -23,24 +23,44 @@ public class PdfUtil {
      * @return 按页分割的文本内容列表
      */
     public static List<String> extractTextFromPdf(File pdfFile) {
-        List<String> pageTexts = new ArrayList<>();
+        return extractTextFromPdf(pdfFile, 1); // 默认每1页一组
+    }
+
+    /**
+     * 读取PDF文件并提取文本内容，按指定页数分组
+     * @param pdfFile PDF文件
+     * @param pagesPerGroup 每组包含的页数
+     * @return 按组分割的文本内容列表
+     */
+    public static List<String> extractTextFromPdf(File pdfFile, int pagesPerGroup) {
+        List<String> groupTexts = new ArrayList<>();
         PDDocument document = null;
 
         try {
             document = PDDocument.load(pdfFile);
             int totalPages = document.getNumberOfPages();
 
-            for (int i = 0; i < totalPages; i++) {
-                // 创建一个PDFTextStripper来处理每一页
+            // 按指定页数分组处理
+            for (int i = 0; i < totalPages; i += pagesPerGroup) {
+                int startPage = i + 1;
+                int endPage = Math.min(i + pagesPerGroup, totalPages);
+
+                // 创建一个PDFTextStripper来处理一组页面
                 PDFTextStripper stripper = new PDFTextStripper();
-                stripper.setStartPage(i + 1);
-                stripper.setEndPage(i + 1);
+                stripper.setStartPage(startPage);
+                stripper.setEndPage(endPage);
 
                 // 设置编码为UTF-8以正确处理中文
                 stripper.setSortByPosition(true);
 
-                String pageText = stripper.getText(document);
-                pageTexts.add(pageText);
+                String groupText = stripper.getText(document);
+
+                // 添加页面范围标识
+                StringBuilder content = new StringBuilder();
+                content.append("第").append(startPage).append("-").append(endPage).append("页内容：");
+                content.append(groupText);
+
+                groupTexts.add(content.toString());
             }
         } catch (IOException e) {
             throw new RuntimeException("读取PDF文件失败: " + e.getMessage(), e);
@@ -54,7 +74,7 @@ public class PdfUtil {
             }
         }
 
-        return pageTexts;
+        return groupTexts;
     }
 
     /**
