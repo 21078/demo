@@ -10,16 +10,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
 // import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,8 +30,8 @@ import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import springai.entity.Session;
 import springai.service.SessionService;
+import springai.service.ConcurrentPdfProcessingService;
 import springai.util.PdfUtil;
-import springai.util.UmlUtil;
 
 @Tag(name = "聊天API")
 @RestController
@@ -42,13 +41,13 @@ public class ChatController {
     private SessionService sessionService;
     @Resource
     private ChatClient chatClient;
+    @Resource
+    private ConcurrentPdfProcessingService concurrentPdfProcessingService;
 
     // @Resource 
     // private StringRedisTemplate stringRedisTemplate;
 
-    //用于拼接key的字符串：
-    public static final String CONTEXT_PRE = "context:";
-    public static final String UMLCODE_PRE = "umlcode:";
+
 
 
 
@@ -109,7 +108,8 @@ public class ChatController {
     }
 
     /**
-     * PDF智能处理 - 提取文本、AI总结、生成PlantUML并创建新PDF
+     * PDF智能处理 - 多线程并发处理，2页一组，使用线程池和CountDownLatch协调
+     * 使用LocalCache记录上下文和中间结果
      * @param pdfFile 上传的PDF文件
      * @return 处理结果信息
      */
@@ -132,50 +132,52 @@ public class ChatController {
             Path tempFile = Files.createTempFile("upload-", ".pdf");
             Files.copy(pdfFile.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
 
-            // 3. 提取PDF文本内容
-            List<String> pageTexts = PdfUtil.extractTextFromPdf(tempFile.toFile());
+            try {
+                // 3. 生成唯一会话ID
+                String sessionId = java.util.UUID.randomUUID().toString();
 
-            // 4. 合并所有页面文本
-            StringBuilder allText = new StringBuilder();
-            for (int i = 0; i < pageTexts.size(); i++) {
-                allText.append("第").append(i + 1).append("页内容：").append(pageTexts.get(i)).append("\n\n");
+                // 4. 提取PDF文本内容，按2页一组
+                List<String> pageGroups = PdfUtil.extractTextFromPdf(tempFile.toFile(), 2);
+
+                if (pageGroups.isEmpty()) {
+                    throw new IllegalArgumentException("PDF文件不包含可提取的文本内容");
+                }
+
+                // 5. 使用多线程并发处理页面组
+                CompletableFuture<ConcurrentPdfProcessingService.PdfProcessingResult> future =
+                    concurrentPdfProcessingService.processPdfConcurrently(pageGroups, sessionId);
+
+                // 等待处理完成
+                ConcurrentPdfProcessingService.PdfProcessingResult processingResult = future.get();
+
+                String finalSummary = processingResult.finalSummary;
+                String finalPlantUmlCode = processingResult.finalPlantUmlCode;
+                List<byte[]> allImages = processingResult.allImages;
+
+                // 6. 生成最终的PDF
+                byte[] newPdfBytes = PdfUtil.createPdfFromImagesToBytes(allImages);
+
+                // 7. 返回结果
+                result.put("success", true);
+                result.put("pageCount", pageGroups.size() * 2); // 估算总页数
+                result.put("groupCount", pageGroups.size());
+                result.put("summary", finalSummary);
+                result.put("plantUmlCode", finalPlantUmlCode);
+
+                // 将PDF字节数组转换为Base64编码的字符串
+                if (newPdfBytes != null && newPdfBytes.length > 0) {
+                    String base64Pdf = java.util.Base64.getEncoder().encodeToString(newPdfBytes);
+                    result.put("processedPdf", base64Pdf);
+                } else {
+                    result.put("processedPdf", null);
+                }
+
+                result.put("message", "PDF处理完成，使用多线程并发处理，2页一组");
+
+            } finally {
+                // 清理临时文件
+                Files.deleteIfExists(tempFile);
             }
-
-            // 5. 使用AI总结文本
-            String summary = generateSummary(allText.toString(), "请总结以下内容");
-
-            // 6. 生成PlantUML
-            String plantUmlCode = UmlUtil.convertTextToPlantUml(chatClient, summary);
-
-            // 7. 创建新的PDF，包含PlantUML图片
-            byte[] plantUmlImage = UmlUtil.convertPlantUmlToImage(plantUmlCode);
-
-            // 8. 生成包含图片的新PDF
-            List<byte[]> images = new ArrayList<>();
-            if (plantUmlImage != null) {
-                images.add(plantUmlImage);
-            }
-
-            byte[] newPdfBytes = PdfUtil.createPdfFromImagesToBytes(images);
-
-            // 9. 清理临时文件
-            Files.deleteIfExists(tempFile);
-
-            // 10. 返回结果
-            result.put("success", true);
-            result.put("pageCount", pageTexts.size());
-            result.put("summary", summary);
-            result.put("plantUmlCode", plantUmlCode);
-
-            // 将PDF字节数组转换为Base64编码的字符串
-            if (newPdfBytes != null && newPdfBytes.length > 0) {
-                String base64Pdf = java.util.Base64.getEncoder().encodeToString(newPdfBytes);
-                result.put("processedPdf", base64Pdf);
-            } else {
-                result.put("processedPdf", null);
-            }
-
-            result.put("message", "PDF处理完成");
 
         } catch (Exception e) {
             result.put("success", false);
@@ -183,13 +185,6 @@ public class ChatController {
         }
 
         return result;
-    }
-
-
-    //文字总结(可携带上文)：
-    private String generateSummary(String text,String message) {
-        Prompt prompt = new Prompt("前文："+message+"，请帮我总结");
-        return chatClient.prompt(prompt).user(text).call().content();
     }
 
 }
