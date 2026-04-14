@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring AI 智能助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 1200px;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            border: 1px solid #e9ecef;
+        }
+
+        .panel h2 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .chat-container {
+            height: 400px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: white;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background: #667eea;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .ai-message {
+            background: #e9ecef;
+            color: #495057;
+            align-self: flex-start;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .chat-input button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .chat-input button:hover {
+            background: #5a67d8;
+        }
+
+        .file-upload {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .file-input {
+            padding: 15px;
+            border: 2px dashed #ced4da;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .file-input:hover {
+            border-color: #667eea;
+        }
+
+        .file-input input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .upload-btn:hover {
+            background: #218838;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: white;
+            border: 1px solid #dee2e6;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: #e9ecef;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Spring AI 智能助手</h1>
+            <p>基于 Spring AI 的智能对话和文档处理平台</p>
+        </div>
+
+        <div class="content">
+            <div class="panel">
+                <h2>💬 智能对话</h2>
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="switchTab('regular')">普通对话</button>
+                    <button class="tab-btn" onclick="switchTab('stream')">流式对话</button>
+                </div>
+
+                <div id="regular-tab" class="tab-content active">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="regular-messages">
+                            <div class="message ai-message">
+                                你好！我是AI助理小红，有什么可以帮助你的吗？
+                            </div>
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="regular-input" placeholder="输入你的问题..." onkeypress="handleRegularKeyPress(event)">
+                            <button onclick="sendRegularMessage()">发送</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="stream-tab" class="tab-content">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="stream-messages">
+                            <div class="message ai-message">
+                                流式对话模式已启动，您可以看到实时响应。
+                            </div>
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="stream-input" placeholder="输入你的问题..." onkeypress="handleStreamKeyPress(event)">
+                            <button onclick="sendStreamMessage()">发送</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>📄 PDF 智能处理</h2>
+                <div class="file-upload">
+                    <div class="file-input" onclick="document.getElementById('pdf-file').click()">
+                        <p>📁 点击选择 PDF 文件</p>
+                        <p id="file-name">未选择文件</p>
+                        <input type="file" id="pdf-file" accept=".pdf" onchange="handleFileSelect()">
+                    </div>
+                    <button class="upload-btn" onclick="uploadPDF()">🚀 开始处理</button>
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>正在处理PDF，请稍候...</p>
+                </div>
+
+                <div class="result" id="pdf-result" style="display: none;">
+                    <h3>处理结果</h3>
+                    <div id="result-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sessionId = Date.now();
+        let eventSource = null;
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Add active class to clicked button
+            event.target.classList.add('active');
+        }
+
+        function appendMessage(containerId, message, isUser = false) {
+            const container = document.getElementById(containerId);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            messageDiv.textContent = message;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendRegularMessage() {
+            const input = document.getElementById('regular-input');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            appendMessage('regular-messages', message, true);
+            input.value = '';
+
+            fetch(`/ai/call?message=${encodeURIComponent(message)}`)
+                .then(response => response.text())
+                .then(data => {
+                    appendMessage('regular-messages', data, false);
+                })
+                .catch(error => {
+                    appendMessage('regular-messages', '抱歉，发生了错误：' + error.message, false);
+                });
+        }
+
+        function handleRegularKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendRegularMessage();
+            }
+        }
+
+        function sendStreamMessage() {
+            const input = document.getElementById('stream-input');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            appendMessage('stream-messages', message, true);
+            input.value = '';
+
+            // Create a new message container for streaming
+            const container = document.getElementById('stream-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai-message';
+            messageDiv.textContent = '正在思考...';
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+
+            // Close previous connection if exists
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            // Create new EventSource for streaming
+            eventSource = new EventSource(`/ai/stream?message=${encodeURIComponent(message)}&sessionId=${sessionId}`);
+
+            let fullResponse = '';
+            eventSource.onmessage = function(event) {
+                fullResponse += event.data;
+                messageDiv.textContent = fullResponse;
+                container.scrollTop = container.scrollHeight;
+            };
+
+            eventSource.onerror = function() {
+                eventSource.close();
+                if (fullResponse === '') {
+                    messageDiv.textContent = '连接出错，请重试';
+                }
+            };
+        }
+
+        function handleStreamKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendStreamMessage();
+            }
+        }
+
+        function handleFileSelect() {
+            const fileInput = document.getElementById('pdf-file');
+            const fileName = document.getElementById('file-name');
+
+            if (fileInput.files.length > 0) {
+                fileName.textContent = `已选择: ${fileInput.files[0].name}`;
+            } else {
+                fileName.textContent = '未选择文件';
+            }
+        }
+
+        function uploadPDF() {
+            const fileInput = document.getElementById('pdf-file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('请先选择PDF文件');
+                return;
+            }
+
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                alert('请选择PDF格式的文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('pdf-result').style.display = 'none';
+
+            fetch('/ai/pdf', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+
+                const resultDiv = document.getElementById('pdf-result');
+                const contentDiv = document.getElementById('result-content');
+
+                if (data.success) {
+                    contentDiv.innerHTML = `
+                        <p><strong>📊 处理成功！</strong></p>
+                        <p>📄 页数: ${data.pageCount}</p>
+                        <p>📋 分组数: ${data.groupCount}</p>
+                        <p>📝 摘要: ${data.summary}</p>
+                        <details>
+                            <summary>🌿 PlantUML 代码</summary>
+                            <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto;">${data.plantUmlCode}</pre>
+                        </details>
+                        ${data.processedPdf ? `<p>✅ 已生成处理后的PDF</p>` : ''}
+                        <p><small>${data.message}</small></p>
+                    `;
+                } else {
+                    contentDiv.innerHTML = `
+                        <p style="color: #dc3545;"><strong>❌ 处理失败</strong></p>
+                        <p>${data.error}</p>
+                    `;
+                }
+
+                resultDiv.style.display = 'block';
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                const resultDiv = document.getElementById('pdf-result');
+                const contentDiv = document.getElementById('result-content');
+                contentDiv.innerHTML = `
+                    <p style="color: #dc3545;"><strong>❌ 上传失败</strong></p>
+                    <p>${error.message}</p>
+                `;
+                resultDiv.style.display = 'block';
+            });
+        }
+    </script>
+</body>
+</html>
