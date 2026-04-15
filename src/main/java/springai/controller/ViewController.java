@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class ViewController {
 
     /**
-     * 根路径重定向到index.html
+     * 根路径重定向到index.html，ssh签名测试
      */
     @GetMapping("/")
     public String redirectToIndex() {
