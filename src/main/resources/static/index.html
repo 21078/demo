@@ -468,7 +468,13 @@
                             <summary>🌿 PlantUML 代码</summary>
                             <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto;">${data.plantUmlCode}</pre>
                         </details>
-                        ${data.processedPdf ? `<p>✅ 已生成处理后的PDF</p>` : ''}
+                        ${data.processedPdf ? `
+                        <p>✅ 已生成处理后的PDF</p>
+                        <a href="data:application/pdf;base64,${data.processedPdf}" download="processed_document.pdf"
+                           style="display: inline-block; background: #007bff; color: white; padding: 10px 15px;
+                                  text-decoration: none; border-radius: 5px; margin: 10px 0;">
+                           📥 下载处理后的PDF
+                        </a>` : ''}
                         <p><small>${data.message}</small></p>
                     `;
                 } else {

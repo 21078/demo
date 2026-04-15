@@ -155,7 +155,12 @@ public class ChatController {
                 List<byte[]> allImages = processingResult.allImages;
 
                 // 6. 生成最终的PDF
+                System.out.println("准备生成PDF，图片数量: " + allImages.size());
+                for (int i = 0; i < allImages.size(); i++) {
+                    System.out.println("图片" + i + "大小: " + (allImages.get(i) != null ? allImages.get(i).length : "null"));
+                }
                 byte[] newPdfBytes = PdfUtil.createPdfFromImagesToBytes(allImages);
+                System.out.println("生成的PDF大小: " + (newPdfBytes != null ? newPdfBytes.length : "null"));
 
                 // 7. PDF转换完成后立即清理缓存（关键优化点）
                 // 注意：这里清理的是处理过程中的临时缓存，不是最终的PlantUML代码
