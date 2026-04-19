@@ -12,7 +12,7 @@ public class SwaggerConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("API文档标题")
+                        .title("智能总结pdf助手")
                         .version("1.0")
                         .description("API描述信息"))
                 .externalDocs(new ExternalDocumentation()
