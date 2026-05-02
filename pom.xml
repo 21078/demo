@@ -98,7 +98,7 @@
 
 
 
-		<!-- Redis引入 -->
+		<!-- Redis引入
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis</artifactId>
@@ -113,7 +113,7 @@
             <groupId>io.lettuce</groupId>
             <artifactId>lettuce-core</artifactId>
             <version>6.4.2.RELEASE</version>
-        </dependency>
+        </dependency> -->
 
         <!-- PlantUML for generating diagrams -->
         <dependency>
